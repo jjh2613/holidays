@@ -22,7 +22,12 @@ export async function fetchOperation(op, year, month, key, fetchImpl = fetch) {
       pageNo: String(pageNo),
       _type: "json",
     });
-    const res = await fetchImpl(`${BASE}/${op}?${params}`);
+    let res;
+    try {
+      res = await fetchImpl(`${BASE}/${op}?${params}`);
+    } catch (e) {
+      throw new Error(`${op} ${year}-${month} 네트워크 오류: ${e.message}`);
+    }
     if (!res.ok) throw new Error(`${op} ${year}-${month} HTTP ${res.status}`);
     const json = await res.json();
 
