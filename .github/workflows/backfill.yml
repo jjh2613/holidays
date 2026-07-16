@@ -32,7 +32,7 @@ jobs:
         with:
           branch: auto/holidays-backfill-${{ inputs.year }}
           title: "chore: 공휴일 백필 ${{ inputs.year }}${{ inputs.month && format('-{0}', inputs.month) || '' }}"
-          commit-message: "chore: 공휴일 백필 ${{ inputs.year }}"
+          commit-message: "chore: 공휴일 백필 ${{ inputs.year }}${{ inputs.month && format('-{0}', inputs.month) || '' }}"
           body: |
             수동 백필 결과입니다 (연도: ${{ inputs.year }}, 월: ${{ inputs.month || '전체' }}).
             변경된 날짜를 확인 후 머지하세요.
