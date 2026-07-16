@@ -18,11 +18,16 @@ async function main() {
       console.error(`건너뜀 ${year}: HTTP ${res.status}`);
       continue;
     }
-    const data = await res.json();
-    const sorted = sortDateInfos(data);
-    writeFileSync(join(PUBLIC, `${year}.json`), JSON.stringify(sorted, null, 2) + "\n");
-    years.push(year);
-    console.log(`시드 완료 ${year}.json (${sorted.length}건)`);
+    try {
+      const data = await res.json();
+      const sorted = sortDateInfos(data);
+      writeFileSync(join(PUBLIC, `${year}.json`), JSON.stringify(sorted, null, 2) + "\n");
+      years.push(year);
+      console.log(`시드 완료 ${year}.json (${sorted.length}건)`);
+    } catch (e) {
+      console.error(`건너뜀 ${year}: ${e.message}`);
+      continue;
+    }
   }
   writeFileSync(
     join(PUBLIC, "index.json"),
