@@ -1,0 +1,32 @@
+name: 공휴일 자동 갱신
+on:
+  schedule:
+    - cron: "0 0 * * *" # UTC 0시 = KST 09시
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 특일정보 조회 (3개월 롤링)
+        run: node scripts/fetch.mjs
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+      - name: 검증
+        run: node scripts/validate.mjs
+      - name: PR 생성
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/holidays-update
+          title: "chore: 공휴일 데이터 자동 갱신"
+          commit-message: "chore: 공휴일 데이터 자동 갱신"
+          body: |
+            공공데이터포털 특일정보 API 자동 조회 결과입니다(이번 달~다다음 달).
+            변경된 날짜를 확인 후 머지하세요.
+          delete-branch: true
