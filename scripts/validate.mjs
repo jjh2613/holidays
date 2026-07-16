@@ -25,6 +25,10 @@ for (const f of files) {
   let prevDate = "";
   let prevKind = 0;
   for (const d of arr) {
+    if (typeof d !== "object" || d === null) {
+      err(`${f}: 배열 요소가 객체가 아님`);
+      continue;
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)) err(`${f}: 날짜 형식 오류 ${d.date}`);
     else if (!d.date.startsWith(`${year}-`)) err(`${f}: ${d.date}는 연도 밖`);
     if (![1, 2, 3, 4].includes(d.kind)) err(`${f}: kind 범위 오류 ${d.kind} (${d.date})`);
