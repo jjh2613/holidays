@@ -85,8 +85,10 @@ holidays/
 
 ## 자동 조회 범위 (효율성)
 
-- 자동 fetch는 **올해 + 내년**만 조회한다. 임시공휴일은 최근 연도에만 발생하므로 충분하고 API 호출을 절약한다.
-- 과거 연도는 시드 이후 고정(필요 시 수동 재조회).
+- 자동 fetch(cron)는 **이번 달 + 다음 달 + 다다음 달**(3개월 롤링 윈도우)만 조회한다.
+  임시공휴일은 임박한 시점에 지정되므로 이 범위로 충분하고 API 호출을 최소화한다.
+- 3개월이 연도 경계를 넘으면(예: 11월 → 11·12월 + 익년 1월) 해당 연도 파일 각각에 병합한다.
+- 과거/원거리 연도는 시드 이후 고정이며, 필요 시 **수동 백필 워크플로우**로 재조회한다.
 
 ## 배포
 
@@ -101,17 +103,33 @@ https://cdn.jsdelivr.net/gh/<user>/holidays@main/public/{year}.json
 
 ## 자동화 워크플로우 (하이브리드)
 
-`.github/workflows/update.yml`
+두 개의 워크플로우로 나눈다.
 
-- **트리거**: `schedule` cron `0 0 * * *` (UTC 0시 = KST 09시) + `workflow_dispatch`(수동)
+### 1) 정기 자동 갱신 — `.github/workflows/update.yml`
+
+- **트리거**: `schedule` cron `0 0 * * *` (UTC 0시 = KST 09시) + `workflow_dispatch`(인자 없이 수동 실행)
+- **범위**: 이번 달 + 다음 달 + 다다음 달 (3개월 롤링)
 - **단계**:
   1. `actions/checkout`
   2. `actions/setup-node`
-  3. `node scripts/fetch.mjs` — Secret `DATA_GO_KR_KEY`로 올해·내년 조회 → JSON 병합
+  3. `node scripts/fetch.mjs` — Secret `DATA_GO_KR_KEY`로 3개월 범위 조회 → JSON 병합
   4. `node scripts/validate.mjs` — 검증 실패 시 중단
   5. `peter-evans/create-pull-request` — 변경분 있으면 PR 생성, 없으면 조용히 종료
 - **통제**: `main` 직접 커밋 금지. **PR로만** 올리고 사람이 diff 확인 후 머지.
 - PR 본문에 변경된 날짜 요약(추가/변경 항목)을 기입.
+
+### 2) 수동 백필 — `.github/workflows/backfill.yml`
+
+혹시 모를 상황(과거 연도 재조회, 특정 월 강제 갱신)을 위해 **수동 실행 전용** 워크플로우를 별도 추가한다.
+
+- **트리거**: `workflow_dispatch`만
+- **입력(inputs)**:
+  - `year` (required) — 조회할 연도 (예: `2025`)
+  - `month` (optional) — 조회할 월 (`1`~`12`). 비우면 **해당 연도 12개월 전체** 조회.
+    - 참고: 특일정보 API는 조회 단위가 연/월이라 '일' 지정은 없다. 특정 날짜는 그 달을 조회하면 포함된다.
+- **단계**: update.yml과 동일하되, 조회 범위만 입력값으로 대체.
+- 마찬가지로 `main` 직접 커밋 없이 **PR 생성** → 사람이 머지.
+- `fetch.mjs`는 조회 범위를 인자/환경변수로 받도록 만들어 두 워크플로우가 같은 스크립트를 공유한다.
 
 ## 검증 (validate.mjs)
 
@@ -127,7 +145,9 @@ https://cdn.jsdelivr.net/gh/<user>/holidays@main/public/{year}.json
 - 조회 API 서버 / 커스텀 도메인 — jsDelivr로 충분.
 - API의 항목 삭제 자동 반영.
 
-## 열린 항목 / 확인 필요
+## 확정 사항 메모
 
-- 소비 편의를 위한 `index.json` 필드 구성(연도 목록 외 최신 갱신일 포함 여부).
-- cron 시각(현재 KST 09시)이 적절한지.
+- cron 시각: KST 09시(UTC 0시)로 확정.
+- 자동 갱신 범위: 이번 달 + 다음 달 + 다다음 달(3개월)로 확정.
+- 수동 백필 워크플로우: 연/월 입력으로 별도 추가 확정.
+- `index.json`: `{ "years": [...], "updatedAt": "ISO8601" }` 형태로 갱신일 포함.
