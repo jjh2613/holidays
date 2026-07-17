@@ -29,7 +29,17 @@ jobs:
         run: node scripts/build.mjs
       - name: 검증
         run: node scripts/validate.mjs
+      - name: auto 변경 감지
+        id: auto_changed
+        run: |
+          if [ -n "$(git status --porcelain -- auto/)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "auto/ 변경 없음 — PR을 생성하지 않습니다."
+          fi
       - name: PR 생성
+        if: steps.auto_changed.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           branch: bot/holidays-backfill-${{ inputs.year }}
