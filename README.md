@@ -74,6 +74,7 @@ interface DateInfo {
 - 없으면 → `auto` 그대로.
 - **수동 편집이 항상 우선**이므로 자동 조회가 수동 값을 덮지 않습니다.
 - 삭제(auto 단독 항목 완전 제거)는 현재 지원하지 않습니다.
+- **알려진 한계**: 원본 API가 기존 `date+kind`의 항목명을 바꾸면, 옛 이름의 항목이 `auto/`에 남아 `public/`에는 같은 그룹의 중복으로 나타납니다. 해당 `date+kind` 그룹에 `manual/` 오버라이드를 추가(그룹 전체 대체)하면 해소됩니다.
 
 수동 편집법은 [`manual/README.md`](./manual/README.md) 참고. 편집 후 `npm run build`로 `public/`을 재생성하세요.
 

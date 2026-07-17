@@ -31,6 +31,9 @@ function validateEntries(label, year, arr) {
     if (![1, 2, 3, 4].includes(d.kind)) err(`${label}: kind 범위 오류 ${d.kind} (${d.date})`);
     if (typeof d.name !== "string" || d.name.trim() === "") err(`${label}: name 비어있음 (${d.date})`);
     if (typeof d.holiday !== "boolean") err(`${label}: holiday가 boolean이 아님 (${d.date})`);
+    if (d.remarks !== null && typeof d.remarks !== "string") err(`${label}: remarks가 string|null이 아님 (${d.date})`);
+    if (d.time !== null && typeof d.time !== "string") err(`${label}: time이 string|null이 아님 (${d.date})`);
+    if (d.sunLng !== null && typeof d.sunLng !== "number") err(`${label}: sunLng이 number|null이 아님 (${d.date})`);
   }
 }
 
@@ -72,10 +75,15 @@ for (const year of publicYears) {
 
 // 3) 무결성: public == build(auto, manual)
 for (const year of allYears) {
-  const expected = JSON.stringify(buildPublic(readLayer(AUTO, year), readLayer(MANUAL, year)), null, 2) + "\n";
-  const file = join(PUBLIC, `${year}.json`);
-  const actual = existsSync(file) ? readFileSync(file, "utf8") : null;
-  if (actual !== expected) err(`public/${year}.json이 최신이 아님 (npm run build 필요)`);
+  try {
+    const expected = JSON.stringify(buildPublic(readLayer(AUTO, year), readLayer(MANUAL, year)), null, 2) + "\n";
+    const file = join(PUBLIC, `${year}.json`);
+    const actual = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (actual !== expected) err(`public/${year}.json이 최신이 아님 (npm run build 필요)`);
+  } catch (e) {
+    err(`${year}: 무결성 검사 중 오류 - ${e.message}`);
+    continue;
+  }
 }
 
 // 4) index.json years 일치
