@@ -31,6 +31,19 @@ const holidays = dates.filter((d) => d.holiday);
 > **캐시 주의**: `@main`은 jsDelivr 캐시가 최대 12~24시간 유지됩니다.
 > 즉시 반영이 필요하면 git 태그를 만들고 `@v1.0.0`처럼 버전을 지정하세요.
 
+### 배포처(미러)
+
+같은 데이터를 여러 CDN에서 서빙합니다. 한 곳이 장애여도 다른 URL로 대체할 수 있습니다.
+
+| 배포처 | URL |
+| --- | --- |
+| jsDelivr (기본) | `https://cdn.jsdelivr.net/gh/jjh2613/holidays@main/public/{year}.json` |
+| GitHub Pages | `https://jjh2613.github.io/holidays/{year}.json` |
+| statically.io | `https://cdn.statically.io/gh/jjh2613/holidays/main/public/{year}.json` |
+
+- **GitHub Pages**는 `public/`을 사이트 루트로 배포하므로 경로에 `public/`이 없습니다. `index.json`도 `https://jjh2613.github.io/holidays/index.json`으로 접근합니다.
+- **statically.io**는 저장소 경로를 그대로 미러링하므로 `public/`이 경로에 포함됩니다. 별도 설정 없이 바로 사용 가능합니다.
+
 ## 데이터 레이어
 
 ```
@@ -106,8 +119,9 @@ npm test
 
 - **공휴일 자동 갱신** (`.github/workflows/update.yml`): 매일 KST 09시 → 조회 → build → 변경 시 PR 생성.
 - **공휴일 수동 백필** (`.github/workflows/backfill.yml`): Actions 탭에서 연/월을 지정해 수동 실행 → PR 생성.
+- **GitHub Pages 배포** (`.github/workflows/deploy-pages.yml`): `main`의 `public/**`가 바뀌면 `public/`을 Pages로 배포. 데이터 PR이 머지될 때마다 자동 갱신됩니다.
 
-두 워크플로우 모두 `main`에 직접 커밋하지 않고 **PR로만** 올립니다. `auto/`와 그 결과인 `public/` diff를 확인한 뒤 머지하세요.
+갱신·백필 워크플로우는 `main`에 직접 커밋하지 않고 **PR로만** 올립니다. `auto/`와 그 결과인 `public/` diff를 확인한 뒤 머지하세요.
 
 ### 설정
 
@@ -116,6 +130,8 @@ npm test
    - Value: 공공데이터포털 **Decoding 키**
 2. **PR 생성 권한 허용** — **Settings → Actions → General → Workflow permissions**
    - "Allow GitHub Actions to create and approve pull requests" 체크
+3. **GitHub Pages 활성화** — **Settings → Pages → Build and deployment → Source**
+   - "GitHub Actions" 선택 (최초 1회). 이후 `deploy-pages.yml`이 자동 배포합니다.
 
 ## 데이터 출처
 
