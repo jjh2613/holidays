@@ -686,8 +686,8 @@
   {
     "date": "2026-07-17",
     "name": "제헌절",
-    "holiday": false,
-    "remarks": "국경일이지만 공휴일 아님",
+    "holiday": true,
+    "remarks": null,
     "kind": 1,
     "time": null,
     "sunLng": null
