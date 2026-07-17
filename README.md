@@ -8,8 +8,8 @@
 
 - 📅 2004~2026년 데이터 수록 (`public/{year}.json`)
 - 🔄 공공데이터포털 특일정보 API로 자동 갱신 (매일, PR로 검토 후 반영)
+- ✍️ 자동(`auto/`)·수동(`manual/`) 레이어 분리 — 수동 편집이 자동 조회에 덮이지 않음
 - 📦 런타임 의존성 0 — Node.js 22 내장 기능만 사용
-- 🧩 소비자용 타입 정의 제공 (`types.ts`)
 
 ## 빠른 시작
 
@@ -28,20 +28,22 @@ const dates = await res.json();
 const holidays = dates.filter((d) => d.holiday);
 ```
 
-`index.json`으로 사용 가능한 연도 목록을 먼저 확인할 수 있습니다.
-
-```js
-const { years, updatedAt } = await fetch(
-  "https://cdn.jsdelivr.net/gh/jjh2613/holidays@main/public/index.json"
-).then((r) => r.json());
-```
-
 > **캐시 주의**: `@main`은 jsDelivr 캐시가 최대 12~24시간 유지됩니다.
 > 즉시 반영이 필요하면 git 태그를 만들고 `@v1.0.0`처럼 버전을 지정하세요.
 
+## 데이터 레이어
+
+```
+auto/{year}.json     API 자동 조회 결과. 손으로 편집하지 않습니다.
+manual/{year}.json   사람이 관리하는 오버라이드(추가·수정). 없으면 비어 있음 취급.
+public/{year}.json   auto + manual 병합 결과. CDN이 서빙합니다. (build가 생성)
+```
+
+셋 다 저장소에 커밋되어 GitHub/CDN에서 각각 확인할 수 있습니다. 소비자는 **`public/`만** 쓰면 됩니다.
+
 ## 데이터 스키마
 
-각 `public/{year}.json`은 `DateInfo[]` 배열이며, `date` → `kind` 순으로 정렬됩니다.
+세 레이어 모두 동일한 `DateInfo[]`이며, `public`은 `date` → `kind` 순 정렬입니다.
 
 ```ts
 interface DateInfo {
@@ -64,6 +66,17 @@ interface DateInfo {
 
 `index.json`: `{ "years": number[], "updatedAt": string }`
 
+## 병합 규칙 (`public = build(auto, manual)`)
+
+`date + kind` 그룹 단위로 병합하며 **manual이 우선**합니다.
+
+- `manual`에 해당 `date+kind` 그룹이 있으면 → `auto`의 그 그룹을 버리고 **manual로 통째 대체**.
+- 없으면 → `auto` 그대로.
+- **수동 편집이 항상 우선**이므로 자동 조회가 수동 값을 덮지 않습니다.
+- 삭제(auto 단독 항목 완전 제거)는 현재 지원하지 않습니다.
+
+수동 편집법은 [`manual/README.md`](./manual/README.md) 참고. 편집 후 `npm run build`로 `public/`을 재생성하세요.
+
 ## 로컬 개발
 
 Node.js 22 이상이 필요합니다. 외부 npm 의존성은 없습니다.
@@ -72,12 +85,12 @@ Node.js 22 이상이 필요합니다. 외부 npm 의존성은 없습니다.
 # 1) API 키 준비 — 공공데이터포털 Decoding 키(날것)를 넣습니다. Encoding 키는 넣지 마세요.
 cp .env.example .env && $EDITOR .env   # DATA_GO_KR_KEY=...
 
-# 2) 초기 데이터 시드 (distbe/holidays에서 2004~2026 복사)
-npm run seed
-
-# 3) 특일정보 조회 (기본: 이번 달~다다음 달, 3개월 롤링)
+# 2) 특일정보 조회 → auto/ 갱신 (기본: 이번 달~다다음 달, 3개월 롤링)
 node --env-file=.env scripts/fetch.mjs
 # 특정 연/월만: FETCH_YEAR=2027 FETCH_MONTH=1 node --env-file=.env scripts/fetch.mjs
+
+# 3) public/ 생성 (auto + manual 병합)
+npm run build
 
 # 4) 검증 / 테스트
 npm run validate
@@ -90,10 +103,10 @@ npm test
 
 ## 자동화 (GitHub Actions)
 
-- **공휴일 자동 갱신** (`.github/workflows/update.yml`): 매일 KST 09시 → 이번 달~다다음 달 조회 → 변경 시 PR 생성.
+- **공휴일 자동 갱신** (`.github/workflows/update.yml`): 매일 KST 09시 → 조회 → build → 변경 시 PR 생성.
 - **공휴일 수동 백필** (`.github/workflows/backfill.yml`): Actions 탭에서 연/월을 지정해 수동 실행 → PR 생성.
 
-두 워크플로우 모두 `main`에 직접 커밋하지 않고 **PR로만** 올립니다. diff를 확인한 뒤 머지하세요.
+두 워크플로우 모두 `main`에 직접 커밋하지 않고 **PR로만** 올립니다. `auto/`와 그 결과인 `public/` diff를 확인한 뒤 머지하세요.
 
 ### 설정
 
@@ -103,25 +116,14 @@ npm test
 2. **PR 생성 권한 허용** — **Settings → Actions → General → Workflow permissions**
    - "Allow GitHub Actions to create and approve pull requests" 체크
 
-## 병합 규칙
-
-자동 조회는 `date|kind|name` 키를 기준으로 기존 데이터와 병합합니다.
-
-- 로컬에 없는 API 항목은 **새로 추가**됩니다 (임시공휴일 등).
-- 이미 로컬에 있는 항목은 **그대로 유지**됩니다 — 수동으로 수정한 값이 자동 조회로 덮어써지지 않습니다.
-- API에서 항목이 사라져도 **자동 삭제하지 않습니다**. 필요 시 직접 삭제하세요.
-
-즉, **수동 편집이 항상 우선**입니다. 자동화는 누락 방지용 보조 수단입니다.
-
 ## 데이터 출처
 
-- 원본 데이터: 공공데이터포털 [한국천문연구원_특일 정보](https://www.data.go.kr/data/15012690/openapi.do)
-- 시드 및 구조 참고: [distbe/holidays](https://github.com/distbe/holidays)
+공공데이터포털 [한국천문연구원_특일 정보](https://www.data.go.kr/data/15012690/openapi.do).
 
 ## 기여
 
 이슈와 PR을 환영합니다. 데이터 오류 제보 시 해당 `날짜 / 이름 / 연도 파일`을 함께 적어 주세요.
-PR 전에 `npm run validate`와 `npm test`가 통과하는지 확인해 주세요.
+PR 전에 `npm run build` 후 `npm run validate`와 `npm test`가 통과하는지 확인해 주세요.
 
 ## 라이선스
 
