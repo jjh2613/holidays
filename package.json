@@ -2,11 +2,18 @@
   "name": "holidays",
   "version": "1.0.0",
   "private": true,
+  "description": "한국 공휴일·기념일·24절기·잡절 데이터를 연도별 JSON으로 관리·배포",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jjh2613/holidays.git"
+  },
+  "keywords": ["holidays", "korea", "공휴일", "특일정보", "json", "cdn"],
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "node --test",
-    "seed": "node scripts/seed.mjs",
+    "build": "node scripts/build.mjs",
     "fetch": "node scripts/fetch.mjs",
     "validate": "node scripts/validate.mjs"
   }

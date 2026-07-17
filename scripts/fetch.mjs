@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { OPERATIONS, fetchOperation } from "./lib/api.mjs";
@@ -7,7 +7,7 @@ import { mergeDateInfos } from "./lib/merge.mjs";
 import { rollingMonths, monthsOfYear } from "./lib/range.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PUBLIC = join(ROOT, "public");
+const AUTO = join(ROOT, "auto");
 
 function targetMonths() {
   if (process.env.FETCH_YEAR) {
@@ -25,6 +25,7 @@ async function main() {
     process.exit(1);
   }
 
+  mkdirSync(AUTO, { recursive: true });
   const months = targetMonths();
   console.log(`조회 범위: ${months.map((m) => `${m.year}-${String(m.month).padStart(2, "0")}`).join(", ")}`);
 
@@ -39,25 +40,14 @@ async function main() {
   }
 
   for (const [year, incoming] of byYear) {
-    const file = join(PUBLIC, `${year}.json`);
+    const file = join(AUTO, `${year}.json`);
     const existing = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : [];
     const merged = mergeDateInfos(existing, incoming);
     writeFileSync(file, JSON.stringify(merged, null, 2) + "\n");
-    console.log(`${year}.json: ${merged.length}건`);
+    console.log(`auto/${year}.json: ${merged.length}건`);
   }
 
-  updateIndex();
-}
-
-function updateIndex() {
-  const years = readdirSync(PUBLIC)
-    .filter((f) => /^\d{4}\.json$/.test(f))
-    .map((f) => Number(f.slice(0, 4)))
-    .sort((a, b) => a - b);
-  writeFileSync(
-    join(PUBLIC, "index.json"),
-    JSON.stringify({ years, updatedAt: new Date().toISOString() }, null, 2) + "\n",
-  );
+  console.log("fetch 완료. `npm run build`로 public을 재생성하세요.");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

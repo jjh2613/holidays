@@ -20,30 +20,24 @@ test("sortDateInfos: 날짜 asc, 동일 날짜는 kind asc", () => {
   ]);
 });
 
-test("mergeDateInfos: collision 시 로컬(existing)이 승리", () => {
+test("mergeDateInfos: collision 시 incoming(API)이 승리", () => {
   const existing = [di("2026-01-01", 1, "새해", { holiday: true, remarks: "old" })];
   const incoming = [di("2026-01-01", 1, "새해", { holiday: true, remarks: "new" })];
   const merged = mergeDateInfos(existing, incoming);
   assert.equal(merged.length, 1);
-  assert.equal(merged[0].remarks, "old");
+  assert.equal(merged[0].remarks, "new");
 });
 
-test("mergeDateInfos: collision 시 로컬 유지 + 신규 incoming 키 추가", () => {
-  const existing = [di("2026-01-01", 1, "새해", { holiday: true, remarks: "old" })];
+test("mergeDateInfos: 조회 범위 밖 기존 항목 보존 + 신규 incoming 추가", () => {
+  const existing = [
+    di("2026-01-01", 1, "새해", { remarks: "old" }),
+    di("2026-12-25", 1, "크리스마스"),
+  ];
   const incoming = [
-    di("2026-01-01", 1, "새해", { holiday: true, remarks: "new" }),
+    di("2026-01-01", 1, "새해", { remarks: "new" }),
     di("2026-03-01", 1, "삼일절", { holiday: true }),
   ];
   const merged = mergeDateInfos(existing, incoming);
-  assert.equal(merged.length, 2);
-  assert.deepEqual(merged.map((d) => d.date), ["2026-01-01", "2026-03-01"]);
-  assert.equal(merged[0].remarks, "old");
-  assert.equal(merged[0].name, "새해");
-});
-
-test("mergeDateInfos: local-only 항목 보존 + 신규 추가", () => {
-  const existing = [di("2026-05-01", 2, "근로자의날")]; // API가 안 주는 수동 항목
-  const incoming = [di("2026-03-01", 1, "삼일절", { holiday: true })];
-  const merged = mergeDateInfos(existing, incoming);
-  assert.deepEqual(merged.map((d) => d.name), ["삼일절", "근로자의날"]);
+  assert.deepEqual(merged.map((d) => d.date), ["2026-01-01", "2026-03-01", "2026-12-25"]);
+  assert.equal(merged[0].remarks, "new");
 });

@@ -18,15 +18,17 @@ jobs:
         run: node scripts/fetch.mjs
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+      - name: public 생성
+        run: node scripts/build.mjs
       - name: 검증
         run: node scripts/validate.mjs
       - name: PR 생성
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: auto/holidays-update
+          branch: bot/holidays-update
           title: "chore: 공휴일 데이터 자동 갱신"
           commit-message: "chore: 공휴일 데이터 자동 갱신"
           body: |
             공공데이터포털 특일정보 API 자동 조회 결과입니다(이번 달~다다음 달).
-            변경된 날짜를 확인 후 머지하세요.
+            `auto/`(원본)와 병합 결과인 `public/` 변경을 확인 후 머지하세요.
           delete-branch: true

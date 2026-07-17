@@ -25,15 +25,17 @@ jobs:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           FETCH_YEAR: ${{ inputs.year }}
           FETCH_MONTH: ${{ inputs.month }}
+      - name: public 생성
+        run: node scripts/build.mjs
       - name: 검증
         run: node scripts/validate.mjs
       - name: PR 생성
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: auto/holidays-backfill-${{ inputs.year }}
+          branch: bot/holidays-backfill-${{ inputs.year }}
           title: "chore: 공휴일 백필 ${{ inputs.year }}${{ inputs.month && format('-{0}', inputs.month) || '' }}"
           commit-message: "chore: 공휴일 백필 ${{ inputs.year }}${{ inputs.month && format('-{0}', inputs.month) || '' }}"
           body: |
             수동 백필 결과입니다 (연도: ${{ inputs.year }}, 월: ${{ inputs.month || '전체' }}).
-            변경된 날짜를 확인 후 머지하세요.
+            `auto/`와 병합 결과인 `public/` 변경을 확인 후 머지하세요.
           delete-branch: true
